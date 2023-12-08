@@ -15,24 +15,36 @@ TARGET := fastp
 BIN_TARGET := ${TARGET}
 
 CXX ?= g++
-CXXFLAGS := -std=c++11 -pthread -g -O3 -I${DIR_INC} $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir)) ${CXXFLAGS}
+LINKER ?= g++
+
+CXXFLAGS := -std=c++11 -pthread -g -O3 -I${DIR_INC} $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir)) $(CPPFLAGS) ${CXXFLAGS}
 LIBS := -lisal -ldeflate -lpthread
 STATIC_FLAGS := -static -Wl,--no-as-needed -pthread
-LD_FLAGS := $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) $(LIBS) $(LD_FLAGS)
-STATIC_LD_FLAGS := $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) $(STATIC_FLAGS) $(LIBS) $(STATIC_LD_FLAGS)
+LD_FLAGS := $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) $(LDFLAGS) $(LD_FLAGS)
+STATIC_LD_FLAGS := $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) $(STATIC_FLAGS) $(LDFLAGS) $(STATIC_LD_FLAGS)
 
+#${BIN_TARGET}:${OBJ}
+#	$(CXX) $(OBJ) -o $@ $(LD_FLAGS)
 
-${BIN_TARGET}:${OBJ}
-	$(CXX) $(OBJ) -o $@ $(LD_FLAGS)
+.PHONY : all
+
+all: fastp
+
+fastp : obj ${OBJ}
+	${LINKER} ${LD_FLAGS} -o $@ ${filter-out obj %.a %.so, $^} ${LIBS}
+obj:
+	mkdir obj
 
 static:${OBJ}
-	$(CXX) $(OBJ) -o ${BIN_TARGET} $(STATIC_LD_FLAGS)
+	$(CXX) $(OBJ) -o ${BIN_TARGET} $(STATIC_LD_FLAGS) ${LIBS}
 
-${DIR_OBJ}/%.o:${DIR_SRC}/%.cpp make_obj_dir
+${DIR_OBJ}/%.o : ${DIR_SRC}/%.cpp
 	$(CXX) -c $< -o $@ $(CXXFLAGS)
+
 
 .PHONY:clean
 .PHONY:static
+
 clean:
 	@if test -d $(DIR_OBJ) ; \
 	then \
